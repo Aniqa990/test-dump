@@ -1,0 +1,5 @@
+{
+  "name": "JavaScript Hello World",
+  "title": "JavaScript Hello World",
+  "buggy_file_blob": "console.log(\"Hello, JavaScript!\");"
+}

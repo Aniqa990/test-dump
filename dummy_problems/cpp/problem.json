@@ -1,0 +1,5 @@
+{
+  "name": "C++ Hello World",
+  "title": "C++ Hello World",
+  "buggy_file_blob": "#include <iostream>\n\nint main() {\n    std::cout << \"Hello, C++!\";\n    return 0;\n}"
+}

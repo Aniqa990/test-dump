@@ -1,0 +1,6 @@
+
+{
+  "name": "C Hello World",
+  "title": "C Hello World",
+  "buggy_file_blob": "#include <stdio.h>\n\nint main() {\n    printf(\"Hello, C!\");\n    return 0;\n}"
+}

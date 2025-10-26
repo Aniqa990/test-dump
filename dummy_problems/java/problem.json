@@ -1,0 +1,5 @@
+{
+  "name": "Java Hello World",
+  "title": "Java Hello World",
+  "buggy_file_blob": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, Java!\");\n    }\n}"
+}
