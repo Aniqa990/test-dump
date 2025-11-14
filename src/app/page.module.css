@@ -3,16 +3,17 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #1a1a1a;
+  background: #1A202C;
   display: flex;
   flex-direction: column;
 }
 
 .topBar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2D3748 0%, #243B55 100%);
   padding: 15px 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
   z-index: 100;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.1);
 }
 
 .topBarContent {
@@ -21,7 +22,14 @@
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
-  color: white;
+  color: #E2E8F0;
+  gap: 20px;
+}
+
+.leftCluster {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .teamInfo {
@@ -33,14 +41,18 @@
 .teamName {
   font-size: 20px;
   font-weight: 600;
+  color: #E2E8F0;
 }
 
 .solvedCount {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(245, 187, 0, 0.2);
+  color: #F5BB00;
   padding: 5px 15px;
   border-radius: 20px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  border: 1px solid rgba(245, 187, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(245, 187, 0, 0.15);
 }
 
 .timerContainer {
@@ -51,21 +63,25 @@
 
 .timerLabel {
   font-size: 14px;
-  opacity: 0.9;
+  color: #E2E8F0;
+  opacity: 0.85;
 }
 
 .timer {
   font-size: 24px;
   font-weight: 700;
   font-family: 'Courier New', monospace;
+  color: #00BFA5;
+  text-shadow: 0 0 10px rgba(0, 191, 165, 0.3);
 }
 
 .timerWarning {
   font-size: 24px;
   font-weight: 700;
   font-family: 'Courier New', monospace;
-  color: #ff4444;
+  color: #EF4444;
   animation: pulse 1s infinite;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
 }
 
 @keyframes pulse {
@@ -73,24 +89,47 @@
   50% { opacity: 0.7; }
 }
 
-.hamburger {
-  position: absolute;
-  top: 95px;
-  left: 20px;
-  z-index: 1001;
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  padding: 10px 15px;
-  font-size: 24px;
-  border-radius: 5px;
+.menuButton {
+  background: rgba(226, 232, 240, 0.1);
+  color: #E2E8F0;
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  border-radius: 12px;
+  width: 46px;
+  height: 46px;
+  font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuButton:hover {
+  background: rgba(0, 191, 165, 0.2);
+  border-color: #00BFA5;
+  color: #00BFA5;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 191, 165, 0.2);
+}
+
+.logoutButton {
+  background: rgba(183, 71, 68, 0.2);
+  color: #B74744;
+  border: 1px solid rgba(183, 71, 68, 0.4);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.3s;
 }
 
-.hamburger:hover {
-  background: white;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+.logoutButton:hover {
+  background: rgba(183, 71, 68, 0.35);
+  border-color: #B74744;
+  color: #E2E8F0;
+  box-shadow: 0 4px 12px rgba(183, 71, 68, 0.3);
+  transform: translateY(-1px);
 }
 
 .sidebar {
@@ -99,11 +138,12 @@
   top: 0;
   width: 280px;
   height: 100vh;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #2D3748 0%, #1A202C 100%);
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
   transition: left 0.3s ease;
   z-index: 1000;
   padding: 20px;
+  border-right: 1px solid rgba(226, 232, 240, 0.1);
 }
 
 .sidebarOpen {
@@ -114,20 +154,30 @@
   position: absolute;
   top: 20px;
   right: 20px;
-  background: none;
-  border: none;
-  font-size: 32px;
+  background: rgba(226, 232, 240, 0.1);
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  border-radius: 8px;
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
-  color: #333;
+  color: #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
 .closeButton:hover {
-  color: #000;
+  background: rgba(0, 191, 165, 0.2);
+  border-color: #00BFA5;
+  color: #00BFA5;
 }
 
 .sidebar h2 {
   margin-bottom: 20px;
-  color: #333;
+  color: #E2E8F0;
+  font-weight: 600;
 }
 
 .problemList {
@@ -138,24 +188,29 @@
 
 .problemButton {
   padding: 12px 16px;
-  border: 2px solid #ddd;
-  background: white;
+  border: 2px solid rgba(226, 232, 240, 0.2);
+  background: rgba(30, 41, 59, 0.5);
   border-radius: 8px;
   cursor: pointer;
   font-size: 16px;
   transition: all 0.3s;
   text-align: left;
+  color: #E2E8F0;
+  font-weight: 500;
 }
 
 .problemButton:hover {
-  background: #f0f0f0;
-  border-color: #999;
+  background: rgba(0, 191, 165, 0.15);
+  border-color: #00BFA5;
+  color: #00BFA5;
+  transform: translateX(4px);
 }
 
 .problemButton.solved {
-  background: #d4edda;
-  border-color: #28a745;
-  color: #155724;
+  background: rgba(245, 187, 0, 0.15);
+  border-color: #F5BB00;
+  color: #F5BB00;
+  font-weight: 600;
 }
 
 .mapContainer {
@@ -196,12 +251,13 @@
   position: absolute;
   cursor: pointer;
   border-radius: 50%;
-  transition: all 0.3s;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background: transparent;
 }
 
 .hotspot:hover {
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+  transform: translateZ(0) scale(1.02);
 }
 
 .hotspotPath {
@@ -220,6 +276,7 @@
   height: 100%;
   opacity: 0.3;
   transition: all 0.5s;
+  pointer-events: none;
 }
 
 .pathContainer svg {
@@ -229,7 +286,7 @@
 
 .pathContainer.glow {
   opacity: 1;
-  filter: drop-shadow(0 0 10px #4dd0e1) drop-shadow(0 0 20px #26c6da) drop-shadow(0 0 30px #00bcd4);
+  filter: drop-shadow(0 0 10px #F5BB00) drop-shadow(0 0 20px #F5BB00) drop-shadow(0 0 30px rgba(245, 187, 0, 0.6));
 }
 
 .popupOverlay {
@@ -246,35 +303,46 @@
 }
 
 .popup {
-  background: white;
+  background: linear-gradient(135deg, #2D3748 0%, #1A202C 100%);
   border-radius: 12px;
   padding: 30px;
   max-width: 900px;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
-  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(226, 232, 240, 0.1);
 }
 
 .popupClose {
   position: absolute;
   top: 15px;
   right: 15px;
-  background: none;
-  border: none;
-  font-size: 32px;
+  background: rgba(226, 232, 240, 0.1);
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  border-radius: 8px;
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
-  color: #666;
+  color: #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
 .popupClose:hover {
-  color: #000;
+  background: rgba(0, 191, 165, 0.2);
+  border-color: #00BFA5;
+  color: #00BFA5;
 }
 
 .popup h2 {
   margin-bottom: 20px;
-  color: #333;
+  color: #E2E8F0;
   font-size: 28px;
+  font-weight: 600;
 }
 
 .popupContent {
@@ -375,4 +443,148 @@
     max-width: 100%;
     max-height: 100%;
   }
+}
+
+/* Floating buttons */
+.floatingButtons {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 1100;
+}
+
+.floatBtn {
+  background: rgba(245, 187, 0, 0.2);
+  border: 1px solid rgba(245, 187, 0, 0.4);
+  color: #F5BB00;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  box-shadow: 0 6px 20px rgba(245, 187, 0, 0.2);
+  cursor: pointer;
+  font-size: 22px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floatBtn:hover {
+  background: rgba(245, 187, 0, 0.3);
+  border-color: #F5BB00;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(245, 187, 0, 0.4);
+}
+
+/* Hints */
+.hintsBody {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.hintCard {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #E2E8F0;
+}
+
+.hintIdx {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #F5BB00;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hintsActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.primaryBtn {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #14B8A6 0%, #00BFA5 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 191, 165, 0.3);
+}
+
+.primaryBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 191, 165, 0.4);
+}
+
+.secondaryBtn {
+  padding: 10px 16px;
+  background: rgba(226, 232, 240, 0.1);
+  color: #E2E8F0;
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.secondaryBtn:hover {
+  background: rgba(226, 232, 240, 0.15);
+  border-color: rgba(226, 232, 240, 0.3);
+}
+
+/* Leaderboard */
+.leaderboard {
+  display: grid;
+  gap: 10px;
+}
+
+.leaderRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.2);
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.leaderTeam {
+  font-weight: 600;
+  color: #E2E8F0;
+}
+
+.leaderSolved {
+  color: #F5BB00;
+  background: rgba(245, 187, 0, 0.2);
+  border: 1px solid rgba(245, 187, 0, 0.3);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  justify-self: end;
+}
+
+.leaderTime {
+  color: #00BFA5;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  justify-self: end;
+}
+
+.leaderInfoNote {
+  font-size: 12px;
+  color: #94A3B8;
 }
