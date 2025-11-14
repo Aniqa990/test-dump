@@ -41,6 +41,11 @@ class SubmissionRequest(BaseModel):
     code: str
     language: str
 
+class RunRequest(BaseModel):
+    language: str
+    code: str
+    stdin: str = ""
+
 @app.get("/test-db")
 def test_db(db: Session = Depends(get_db)):
     return {"teams": [t.name for t in db.query(models.Team).all()]}
@@ -64,6 +69,11 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 def get_problems(db: Session = Depends(get_db)):
     problems = db.query(models.Problem).all()
     return [{"id": p.id, "title": p.title, "buggy_file_blob": p.buggy_file_blob} for p in problems]
+
+@app.get("/testcases")
+def get_testcases(problem_id: int, db: Session = Depends(get_db)):
+    test_cases = db.query(models.TestCase).filter(models.TestCase.problem_id == problem_id).all()
+    return [{"test_case_id": tc.test_case_id, "input_data": tc.input_data, "expected_output": tc.expected_output} for tc in test_cases]
 
 @app.get("/submissions")
 def get_submissions(team_id: int, db: Session = Depends(get_db)):
@@ -119,3 +129,15 @@ def submit(request: SubmissionRequest, db: Session = Depends(get_db)):
 
     db.commit()
     return {"status": status}
+
+@app.post("/run")
+def run_code(request: RunRequest):
+    try:
+        result = piston.execute_code(
+            language=request.language,
+            code=request.code,
+            stdin=request.stdin
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Execution failed: {str(e)}")

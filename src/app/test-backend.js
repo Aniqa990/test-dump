@@ -10,7 +10,7 @@ export default function TestBackend() {
     const testConnection = async () => {
       try {
         console.log('Testing connection to backend...');
-        const res = await fetch('http://127.0.0.1:8000/ping');
+        const res = await fetch('http://127.0.0.1:8001/ping');
         const result = await res.json();
         setStatus('✅ Connected!');
         setData(result);

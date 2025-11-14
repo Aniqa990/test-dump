@@ -1,0 +1,313 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=Anton&display=swap');
+
+.landingContainer {
+  width: 100vw;
+  min-height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  background: linear-gradient(135deg, #1A202C 0%, #0F172A 50%, #1F2927 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.heroSection {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  opacity: 0;
+  transition: opacity 1s ease-in;
+  padding: 40px 0;
+}
+
+.heroSection.fadeIn {
+  opacity: 1;
+}
+
+.backgroundOverlay {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(245, 187, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(0, 191, 165, 0.1) 0%, transparent 50%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(26, 32, 44, 0.9) 100%);
+  z-index: 0;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  max-width: min(1200px, 95vw);
+  width: 100%;
+  padding: clamp(20px, 4vw, 60px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(24px, 4vw, 50px);
+  margin: auto;
+}
+
+.logoSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 2vw, 20px);
+  margin-bottom: clamp(20px, 3vw, 40px);
+  width: 100%;
+}
+
+.eventBadge {
+  background: rgba(245, 187, 0, 0.15);
+  border: 1px solid rgba(245, 187, 0, 0.3);
+  padding: 8px 20px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.acmText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #F5BB00;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.mainTitle {
+  font-family: 'Bebas Neue', 'Oswald', 'Anton', sans-serif;
+  font-size: clamp(48px, 10vw, 120px);
+  font-weight: 400;
+  color: #FFFFFF;
+  letter-spacing: clamp(0.05em, 0.1em, 0.15em);
+  margin: 0;
+  text-shadow: 
+    clamp(2px, 0.3vw, 4px) clamp(2px, 0.3vw, 4px) 0px rgba(0, 0, 0, 0.8),
+    clamp(3px, 0.5vw, 6px) clamp(3px, 0.5vw, 6px) 0px rgba(0, 0, 0, 0.6),
+    clamp(4px, 0.7vw, 8px) clamp(4px, 0.7vw, 8px) 0px rgba(0, 0, 0, 0.4),
+    0 0 clamp(20px, 2vw, 30px) rgba(245, 187, 0, 0.5);
+  text-transform: uppercase;
+  line-height: 0.9;
+  animation: glow 3s ease-in-out infinite alternate;
+  width: 100%;
+  word-break: break-word;
+}
+
+@keyframes glow {
+  from {
+    filter: drop-shadow(0 0 20px rgba(245, 187, 0, 0.3));
+  }
+  to {
+    filter: drop-shadow(0 0 30px rgba(0, 191, 165, 0.4));
+  }
+}
+
+.subtitle {
+  font-family: 'Bebas Neue', 'Oswald', 'Anton', sans-serif;
+  font-size: clamp(24px, 5vw, 56px);
+  font-weight: 400;
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: clamp(0.1em, 0.15em, 0.2em);
+  text-transform: uppercase;
+  text-shadow: 
+    clamp(2px, 0.3vw, 3px) clamp(2px, 0.3vw, 3px) 0px rgba(0, 0, 0, 0.8),
+    clamp(3px, 0.4vw, 5px) clamp(3px, 0.4vw, 5px) 0px rgba(0, 0, 0, 0.6),
+    0 0 clamp(15px, 1.5vw, 20px) rgba(0, 191, 165, 0.4);
+  line-height: 1;
+  width: 100%;
+  word-break: break-word;
+}
+
+.tagline {
+  font-size: clamp(14px, 1.5vw, 18px);
+  font-weight: 500;
+  color: #94A3B8;
+  font-style: italic;
+  margin: 16px 0 0 0;
+  max-width: 600px;
+  line-height: 1.6;
+}
+
+.titleUnderline {
+  width: 120px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #F5BB00, #00BFA5, transparent);
+  margin-top: 8px;
+  border-radius: 2px;
+}
+
+.description {
+  font-size: clamp(14px, 1.8vw, 18px);
+  color: #94A3B8;
+  max-width: min(700px, 90vw);
+  width: 100%;
+  line-height: 1.8;
+  margin: 0;
+  padding: 0 clamp(10px, 2vw, 20px);
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(220px, 25vw, 300px), 1fr));
+  gap: clamp(16px, 2vw, 28px);
+  width: 100%;
+  max-width: min(1000px, 95vw);
+  margin-top: clamp(16px, 2vw, 24px);
+  padding: 0 clamp(10px, 2vw, 20px);
+}
+
+.featureCard {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(226, 232, 240, 0.1);
+  border-radius: clamp(12px, 1.5vw, 16px);
+  padding: clamp(24px, 3vw, 36px) clamp(20px, 2.5vw, 28px);
+  transition: all 0.3s;
+  backdrop-filter: blur(8px);
+  width: 100%;
+  max-width: 100%;
+}
+
+.featureCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(245, 187, 0, 0.3);
+  box-shadow: 0 12px 32px rgba(245, 187, 0, 0.15);
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.featureIcon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.featureCard h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #E2E8F0;
+  margin: 0 0 12px 0;
+}
+
+.featureCard p {
+  font-size: 14px;
+  color: #94A3B8;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ctaButton {
+  background: linear-gradient(135deg, #F5BB00 0%, #FF9900 100%);
+  border: none;
+  color: #1A202C;
+  padding: clamp(14px, 2vw, 20px) clamp(36px, 5vw, 56px);
+  border-radius: clamp(10px, 1.2vw, 12px);
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 14px);
+  margin-top: clamp(16px, 2vw, 24px);
+  box-shadow: 0 clamp(6px, 0.8vw, 10px) clamp(20px, 2.5vw, 28px) rgba(245, 187, 0, 0.3);
+  letter-spacing: 0.05em;
+  width: auto;
+  min-width: fit-content;
+}
+
+.ctaButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(245, 187, 0, 0.4);
+  background: linear-gradient(135deg, #FF9900 0%, #F5BB00 100%);
+}
+
+.ctaButton:active {
+  transform: translateY(0);
+}
+
+.arrow {
+  font-size: 24px;
+  transition: transform 0.3s;
+}
+
+.ctaButton:hover .arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 1024px) {
+  .content {
+    max-width: 95vw;
+    padding: clamp(20px, 3vw, 40px);
+  }
+
+  .features {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: clamp(14px, 2vw, 20px);
+  }
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: clamp(16px, 3vw, 32px);
+    gap: clamp(20px, 4vw, 36px);
+  }
+
+  .logoSection {
+    gap: clamp(10px, 2vw, 16px);
+  }
+
+  .mainTitle {
+    font-size: clamp(40px, 12vw, 64px);
+  }
+
+  .subtitle {
+    font-size: clamp(20px, 6vw, 32px);
+  }
+
+  .features {
+    grid-template-columns: 1fr;
+    gap: clamp(12px, 2vw, 18px);
+    max-width: 100%;
+  }
+
+  .featureCard {
+    padding: clamp(20px, 3vw, 28px) clamp(16px, 2.5vw, 24px);
+  }
+
+  .ctaButton {
+    padding: clamp(14px, 2.5vw, 18px) clamp(32px, 6vw, 48px);
+    font-size: clamp(14px, 2vw, 18px);
+    width: 100%;
+    max-width: 90%;
+    justify-content: center;
+  }
+
+  .description {
+    font-size: clamp(13px, 2vw, 16px);
+    padding: 0 clamp(8px, 2vw, 16px);
+  }
+}
+
+@media (max-width: 480px) {
+  .mainTitle {
+    font-size: clamp(36px, 14vw, 48px);
+    letter-spacing: 0.05em;
+  }
+
+  .subtitle {
+    font-size: clamp(18px, 7vw, 24px);
+  }
+
+  .eventBadge {
+    padding: 6px 16px;
+  }
+
+  .acmText {
+    font-size: 10px;
+  }
+}
+
