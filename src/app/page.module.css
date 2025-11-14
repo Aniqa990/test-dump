@@ -588,3 +588,21 @@
   font-size: 12px;
   color: #94A3B8;
 }
+
+.lanternGlow {
+  /* optional smooth transform scale */
+  transform-origin: center;
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0% {
+    filter: drop-shadow(0 0 0px #ffd700);
+  }
+  50% {
+    filter: drop-shadow(0 0 50px #ffd700);
+  }
+  100% {
+    filter: drop-shadow(0 0 0px #ffd700);
+  }
+}

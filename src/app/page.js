@@ -21,8 +21,6 @@ export default function Home() {
   const [language, setLanguage] = useState('python');
   const [code, setCode] = useState('');
   const [showSolutionSection, setShowSolutionSection] = useState(false);
-  //const [timeRemaining, setTimeRemaining] = useState(60 * 60); // 60 minutes in seconds
-  //const [timerStartTime, setTimerStartTime] = useState(null);
   const submissionsFetchWarned = useRef(false);
   const [timeRemaining, setTimeRemaining] = useState(60 * 60); // 60 minutes in seconds
   const [timerStartTime, setTimerStartTime] = useState(null);
@@ -43,8 +41,8 @@ export default function Home() {
     const hasSeenLanding = sessionStorage.getItem("hasSeenLanding");
     if (hasSeenLanding) {
       setShowLanding(false);
-      // If landing is already seen, we can check auth immediately
-      // This will be handled by the auth useEffect below
+      // If landing is already seen, mark auth as checked so auth useEffect can run
+      setAuthChecked(true);
     } else {
       // If landing hasn't been seen, mark auth as checked so we don't show login
       setAuthChecked(true);
@@ -54,8 +52,14 @@ export default function Home() {
   // Check authentication on mount
   useEffect(() => {
     if (showLanding) {
-      setAuthChecked(true);
       return; // Don't check auth if showing landing
+    }
+    
+    // If auth hasn't been checked yet, set it to true and proceed
+    // (This handles the case where showLanding becomes false but authChecked hasn't been set)
+    if (!authChecked) {
+      setAuthChecked(true);
+      // Continue to check auth below
     }
 
     const savedTeamInfo = localStorage.getItem("team_info");
@@ -114,7 +118,7 @@ export default function Home() {
       }
   
       setAuthChecked(true);
-    }, [showLanding]);
+    }, [showLanding, authChecked]);
 
   // Fetch problems with caching
   useEffect(() => {
@@ -151,8 +155,8 @@ export default function Home() {
       }
     }, 1000);
 
-  //   return () => clearInterval(interval);
-  // }, [timerStartTime, isAuthenticated]);
+     return () => clearInterval(interval);
+   }, [timerStartTime, isAuthenticated]);
 
   const fetchProblems = async () => {
     // Check cache first
@@ -211,14 +215,6 @@ export default function Home() {
     const savedTeamInfo = localStorage.getItem("team_info");
     if (savedTeamInfo) {
       setTeamInfo(JSON.parse(savedTeamInfo));
-
-      // Start timer
-      // const savedStartTime = localStorage.getItem('timer_start_time');
-      // if (!savedStartTime) {
-      //   const now = Date.now();
-      //   setTimerStartTime(now);
-      //   localStorage.setItem('timer_start_time', now.toString());
-      // }
       const savedStartTime = localStorage.getItem("timer_start_time");
       if (!savedStartTime) {
         const now = Date.now();
@@ -241,6 +237,10 @@ export default function Home() {
   };
 
   const goToProblem = (problemId) => {
+    if (problemId === 6 && ![1,2,3,4,5].every(isSolved)) {
+      toast.error("You must solve all other problems first to unlock the final problem!");
+      return;
+    }
     router.push(`/branch/${problemId}`);
   };
 
@@ -276,8 +276,21 @@ export default function Home() {
   }
 
   // Wait for auth check to complete before showing login
+  // Show a minimal loading state instead of null to avoid blank screen
   if (!authChecked) {
-    return null; // or a loading spinner
+    return (
+      <div style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#1a1a1a',
+        color: 'white'
+      }}>
+        Loading...
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -396,22 +409,19 @@ export default function Home() {
               <pattern id="pattern18_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
                 <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
               </pattern>
-              {/* Image reference - patterns will reference this image */}
-              {/* Note: The actual image data needs to be loaded from transparent-path.svg */}
-              {/* For now, we'll use an object tag approach or load the SVG content */}
-              <image id="image0_35_11" width="500" height="500" preserveAspectRatio="none" href="/svgs/transparent-path.svg"/>
+              <image id="image0_35_11" className={styles.lanternGlow} width="500" height="500" preserveAspectRatio="none" href="/images/lantern.png"/>
             </defs>
             
-            {/* Mantis (Tree Path) - patterns 0-3 - Problem ID 1 */}
-            <g style={{ display: isSolved(1) ? 'block' : 'none' }}>
+            {/* Tigress (Tree Path) - patterns 0-3 - Problem ID 5 */}
+            <g style={{ display: isSolved(5) ? 'block' : 'none' }}>
               <rect x="482" y="311" width="83" height="83" fill="url(#pattern0_35_11)"/>
               <rect x="576" y="352" width="83" height="83" fill="url(#pattern1_35_11)"/>
               <rect x="623" y="420" width="87" height="87" fill="url(#pattern2_35_11)"/>
               <rect x="630" y="507" width="80" height="80" fill="url(#pattern3_35_11)"/>
             </g>
             
-            {/* Monkey (Barracks Path) - patterns 4-5 - Problem ID 2 */}
-            <g style={{ display: isSolved(2) ? 'block' : 'none' }}>
+            {/* Mantis (Barracks Path) - patterns 4-5 - Problem ID 1 */}
+            <g style={{ display: isSolved(1) ? 'block' : 'none' }}>
               <rect x="467" y="525" width="87" height="76" fill="url(#pattern4_35_11)"/>
               <rect x="565" y="576" width="82" height="82" fill="url(#pattern5_35_11)"/>
             </g>
@@ -433,14 +443,14 @@ export default function Home() {
               <rect x="892" y="291" width="81" height="81" fill="url(#pattern14_35_11)"/>
             </g>
             
-            {/* Tigress (Temple Path) - patterns 15-16 - Problem ID 5 */}
-            <g style={{ display: isSolved(5) ? 'block' : 'none' }}>
+            {/* Shifu (Palace Path) - patterns 15-16 - Problem ID 6 */}
+            <g style={{ display: isSolved(6) ? 'block' : 'none' }}>
               <rect x="680" y="272" width="81" height="81" fill="url(#pattern15_35_11)"/>
               <rect x="613" y="195" width="81" height="81" fill="url(#pattern16_35_11)"/>
             </g>
             
-            {/* Shifu (Training Hall Path) - patterns 17-18 - Problem ID 6 */}
-            <g style={{ display: isSolved(6) ? 'block' : 'none' }}>
+            {/* Monkey (Training Hall Path) - patterns 17-18 - Problem ID 2 */}
+            <g style={{ display: isSolved(2) ? 'block' : 'none' }}>
               <rect x="892" y="522" width="81" height="81" fill="url(#pattern17_35_11)"/>
               <rect x="791" y="515" width="81" height="81" fill="url(#pattern18_35_11)"/>
             </g>
@@ -474,7 +484,7 @@ export default function Home() {
                   id={hotspotId}
                   d={pathData}
                   className={styles.hotspotPath}
-                  onClick={() => handleHotspotClick(problem.id)}
+                  onClick={() => goToProblem(problem.id)}
                   title={problem.title}
                   fill="transparent"
                   stroke="transparent"
@@ -541,6 +551,5 @@ export default function Home() {
       )}
     </div>
   );
-  });
-}
+  }
 

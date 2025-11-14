@@ -101,14 +101,14 @@ const generateCodeTemplate = (pythonCode, targetLanguage, problemId) => {
   const functionName = functionMatch[1];
   const paramsMatch = pythonCode.match(/def\s+\w+\s*\(([^)]*)\)/);
   const params = paramsMatch ? paramsMatch[1].split(',').map(p => p.trim()) : [];
-  
+
   // Extract the buggy return statement
   const returnMatch = pythonCode.match(/return\s+([^#\n]+)/);
   const buggyReturn = returnMatch ? returnMatch[1].trim() : '';
 
   // Extract main block logic
-  const mainBlock = pythonCode.includes("if __name__ == '__main__':") 
-    ? pythonCode.split("if __name__ == '__main__':")[1] 
+  const mainBlock = pythonCode.includes("if __name__ == '__main__':")
+    ? pythonCode.split("if __name__ == '__main__':")[1]
     : '';
 
   // Generate templates based on problem structure
@@ -147,7 +147,7 @@ export default function BranchPage() {
   const [loadingProblem, setLoadingProblem] = useState(true);
   const [testCases, setTestCases] = useState([]);
   const submissionsFetchWarned = useRef(false);
-  
+
 
   useEffect(() => {
     const savedTeamInfo = localStorage.getItem("team_info");
@@ -342,28 +342,28 @@ export default function BranchPage() {
       // Check if code has hardcoded numeric values in print/function calls
       // Pattern: print(function_name(number, number)) or print(number)
       const hasHardcodedValues = /print\s*\([^)]*\d+[^)]*\)/.test(code);
-      
+
       // Check if stdin reading code exists
-      const hasStdinCode = code.includes("sys.stdin.readline()") || 
-                          code.includes("sys.stdin.read()") ||
-                          code.includes("input()") ||
-                          code.includes("Scanner") ||
-                          code.includes("cin") ||
-                          code.includes("scanf");
-      
+      const hasStdinCode = code.includes("sys.stdin.readline()") ||
+        code.includes("sys.stdin.read()") ||
+        code.includes("input()") ||
+        code.includes("Scanner") ||
+        code.includes("cin") ||
+        code.includes("scanf");
+
       // If code has hardcoded values in print statements, we need to provide stdin
       // to prevent the stdin reading line from failing, OR we need to detect if
       // the stdin reading is actually being used
-      
+
       // Better approach: Check if the print statement comes AFTER stdin reading
       // and has hardcoded values - if so, stdin reading might fail
       const stdinLineIndex = code.indexOf("sys.stdin.readline()");
       const printLineIndex = code.lastIndexOf("print(");
-      
+
       // If print with hardcoded values comes after stdin reading, stdin will be read first
       // So we need to provide stdin OR detect that stdin reading is not needed
       let useStdin = stdin || "";
-      
+
       if (hasHardcodedValues && hasStdinCode) {
         // Check if stdin reading line is actually executed before the hardcoded print
         if (stdinLineIndex !== -1 && printLineIndex !== -1 && stdinLineIndex < printLineIndex) {
@@ -383,7 +383,7 @@ export default function BranchPage() {
           }
         }
       }
-      
+
       const response = await fetch("/api/run", {
         method: "POST",
         headers: {
@@ -419,15 +419,15 @@ export default function BranchPage() {
           runOutput = data.compile.output;
         }
       }
-      
+
       if (!runOutput && data.message) {
         runOutput = data.message;
       }
-      
+
       if (!runOutput) {
         runOutput = "No output produced.";
       }
-      
+
       setOutput(runOutput);
     } catch (error) {
       console.error("Run error:", error);
@@ -450,7 +450,7 @@ export default function BranchPage() {
 
     setIsRunningTests(true);
     setOutput("");
-    
+
     try {
       const results = [];
       let passedCount = 0;
@@ -458,7 +458,7 @@ export default function BranchPage() {
 
       for (let i = 0; i < testCases.length; i++) {
         const testCase = testCases[i];
-        
+
         const response = await fetch("/api/run", {
           method: "POST",
           headers: {
@@ -472,7 +472,7 @@ export default function BranchPage() {
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
           results.push({
             testCase: i + 1,
@@ -513,7 +513,7 @@ export default function BranchPage() {
 
       // Format output
       let outputText = `Test Results: ${passedCount}/${testCases.length} passed\n\n`;
-      
+
       results.forEach((result) => {
         outputText += `Test Case ${result.testCase}:\n`;
         outputText += `  Input: ${result.input}\n`;
@@ -523,7 +523,7 @@ export default function BranchPage() {
       });
 
       setOutput(outputText);
-      
+
       if (passedCount === testCases.length) {
         toast.success(`All ${testCases.length} test cases passed! 🎉`);
       } else {
@@ -595,24 +595,24 @@ export default function BranchPage() {
   // Format output with color coding
   const formatOutput = (outputText) => {
     if (!outputText) return null;
-    
+
     // Check for errors
-    if (outputText.includes("Error:") || 
-        outputText.includes("Traceback") || 
-        outputText.includes("Exception") ||
-        outputText.includes("ValueError") ||
-        outputText.includes("SyntaxError") ||
-        outputText.includes("TypeError") ||
-        outputText.includes("NameError") ||
-        outputText.includes("RuntimeError")) {
+    if (outputText.includes("Error:") ||
+      outputText.includes("Traceback") ||
+      outputText.includes("Exception") ||
+      outputText.includes("ValueError") ||
+      outputText.includes("SyntaxError") ||
+      outputText.includes("TypeError") ||
+      outputText.includes("NameError") ||
+      outputText.includes("RuntimeError")) {
       return <span className={styles.outputError}>{outputText}</span>;
     }
-    
+
     // Check for warnings
     if (outputText.includes("Warning:") || outputText.includes("warning")) {
       return <span className={styles.outputWarning}>{outputText}</span>;
     }
-    
+
     // Success output (normal output)
     return <span className={styles.outputSuccess}>{outputText}</span>;
   };
@@ -698,9 +698,8 @@ export default function BranchPage() {
             📜 Problem Scroll
           </button>
           <button
-            className={`${styles.glassButton} ${
-              showEditor ? styles.activeButton : ""
-            }`}
+            className={`${styles.glassButton} ${showEditor ? styles.activeButton : ""
+              }`}
             onClick={() => setShowEditor((prev) => !prev)}
           >
             💻 Code Editor
@@ -717,9 +716,8 @@ export default function BranchPage() {
             <div>
               <span className={styles.label}>Status</span>
               <span
-                className={`${styles.statusPill} ${
-                  solvedThisProblem ? styles.statusSolved : styles.statusInProgress
-                }`}
+                className={`${styles.statusPill} ${solvedThisProblem ? styles.statusSolved : styles.statusInProgress
+                  }`}
               >
                 {solvedThisProblem ? "Completed" : "In Progress"}
               </span>
@@ -734,7 +732,7 @@ export default function BranchPage() {
         <button className={styles.hintButton}>🧠 Hints</button>
 
         {showEditor && (
-          <div 
+          <div
             className={styles.editorOverlay}
             onClick={(e) => {
               // Close when clicking on overlay (but not the editor itself)
@@ -810,7 +808,7 @@ export default function BranchPage() {
                   </div>
                   <div className={styles.codeEditorWrapper}>
                     <div className={styles.codeEditorContainer}>
-                      <div 
+                      <div
                         ref={lineNumbersRef}
                         className={styles.lineNumbers}
                       >
@@ -853,11 +851,19 @@ export default function BranchPage() {
                 </div>
               </div>
 
-            <div className={styles.editorFooter}>
-              <button className={styles.submitButton} onClick={handleSubmit}>
-                Submit to Judge
-              </button>
-            </div>
+              <div className={styles.editorFooter}>
+                <button
+                  className={styles.submitButton}
+                  onClick={handleSubmit}
+                  disabled={solvedThisProblem} // Disable if already solved
+                  style={{
+                    cursor: solvedThisProblem ? 'not-allowed' : 'pointer',
+                    backgroundColor: solvedThisProblem ? '#9CA3AF' : '', // gray out if solved
+                  }}
+                >
+                  {solvedThisProblem ? "Already Submitted!" : "Submit to Judge"}
+                </button>
+              </div>
             </div>
           </div>
         )}
