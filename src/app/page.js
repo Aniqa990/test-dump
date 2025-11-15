@@ -13,9 +13,14 @@ export default function Home() {
   const [showLanding, setShowLanding] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [teamInfo, setTeamInfo] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [problems, setProblems] = useState([]);
   const [submissions, setSubmissions] = useState({});
+  const [selectedProblem, setSelectedProblem] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [buggyCode, setBuggyCode] = useState('');
+  const [language, setLanguage] = useState('python');
+  const [code, setCode] = useState('');
+  const [showSolutionSection, setShowSolutionSection] = useState(false);
   const submissionsFetchWarned = useRef(false);
   const [timeRemaining, setTimeRemaining] = useState(60 * 60); // 60 minutes in seconds
   const [timerStartTime, setTimerStartTime] = useState(null);
@@ -36,8 +41,8 @@ export default function Home() {
     const hasSeenLanding = sessionStorage.getItem("hasSeenLanding");
     if (hasSeenLanding) {
       setShowLanding(false);
-      // If landing is already seen, we can check auth immediately
-      // This will be handled by the auth useEffect below
+      // If landing is already seen, mark auth as checked so auth useEffect can run
+      setAuthChecked(true);
     } else {
       // If landing hasn't been seen, mark auth as checked so we don't show login
       setAuthChecked(true);
@@ -47,67 +52,73 @@ export default function Home() {
   // Check authentication on mount
   useEffect(() => {
     if (showLanding) {
-      setAuthChecked(true);
       return; // Don't check auth if showing landing
+    }
+    
+    // If auth hasn't been checked yet, set it to true and proceed
+    // (This handles the case where showLanding becomes false but authChecked hasn't been set)
+    if (!authChecked) {
+      setAuthChecked(true);
+      // Continue to check auth below
     }
 
     const savedTeamInfo = localStorage.getItem("team_info");
-    if (savedTeamInfo) {
-      try {
-        const info = JSON.parse(savedTeamInfo);
-        // Check timer before authenticating to avoid flashing main UI when expired
-        const savedStartTime = localStorage.getItem("timer_start_time");
-        if (savedStartTime) {
-          const startTime = parseInt(savedStartTime, 10);
-          const elapsed = Math.floor((Date.now() - startTime) / 1000);
-          const remaining = Math.max(0, 60 * 60 - elapsed);
-
-          if (remaining <= 0) {
-            // Session expired: clear stale data and show login
-            localStorage.removeItem("team_info");
-            localStorage.removeItem("timer_start_time");
-            localStorage.removeItem("submissions");
-            localStorage.removeItem("problems_cache");
-            setIsAuthenticated(false);
-            setTeamInfo(null);
-            setTimeRemaining(60 * 60);
-            setTimerStartTime(null);
-            setAuthChecked(true);
-            return;
+      if (savedTeamInfo) {
+        try {
+          const info = JSON.parse(savedTeamInfo);
+          // Check timer before authenticating to avoid flashing main UI when expired
+          const savedStartTime = localStorage.getItem("timer_start_time");
+          if (savedStartTime) {
+            const startTime = parseInt(savedStartTime, 10);
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const remaining = Math.max(0, 60 * 60 - elapsed);
+  
+            if (remaining <= 0) {
+              // Session expired: clear stale data and show login
+              localStorage.removeItem("team_info");
+              localStorage.removeItem("timer_start_time");
+              localStorage.removeItem("submissions");
+              localStorage.removeItem("problems_cache");
+              setIsAuthenticated(false);
+              setTeamInfo(null);
+              setTimeRemaining(60 * 60);
+              setTimerStartTime(null);
+              setAuthChecked(true);
+              return;
+            }
+  
+            setTimeRemaining(remaining);
+            setTimerStartTime(startTime);
+          } else {
+            // No timer found: start a new one
+            const now = Date.now();
+            setTimerStartTime(now);
+            localStorage.setItem("timer_start_time", now.toString());
           }
-
-          setTimeRemaining(remaining);
-          setTimerStartTime(startTime);
-        } else {
-          // No timer found: start a new one
-          const now = Date.now();
-          setTimerStartTime(now);
-          localStorage.setItem("timer_start_time", now.toString());
-        }
-
-        setTeamInfo(info);
-        setIsAuthenticated(true);
-
-        // Restore submissions
-        const savedSubmissions = localStorage.getItem("submissions");
-        if (savedSubmissions) {
-          try {
-            setSubmissions(JSON.parse(savedSubmissions));
-          } catch (e) {
-            console.warn("Failed to parse submissions", e);
+  
+          setTeamInfo(info);
+          setIsAuthenticated(true);
+  
+          // Restore submissions
+          const savedSubmissions = localStorage.getItem("submissions");
+          if (savedSubmissions) {
+            try {
+              setSubmissions(JSON.parse(savedSubmissions));
+            } catch (e) {
+              console.warn("Failed to parse submissions", e);
+            }
           }
+        } catch (error) {
+          console.error("Failed to parse team info", error);
+          localStorage.removeItem("team_info");
+          setIsAuthenticated(false);
         }
-      } catch (error) {
-        console.error("Failed to parse team info", error);
-        localStorage.removeItem("team_info");
+      } else {
         setIsAuthenticated(false);
       }
-    } else {
-      setIsAuthenticated(false);
-    }
-
-    setAuthChecked(true);
-  }, [showLanding]);
+  
+      setAuthChecked(true);
+    }, [showLanding, authChecked]);
 
   // Fetch problems with caching
   useEffect(() => {
@@ -117,13 +128,22 @@ export default function Home() {
         fetchSubmissions();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, teamInfo?.team_id, showLanding]);
+  }, [isAuthenticated, teamInfo, showLanding]);
 
   // Timer countdown
   useEffect(() => {
     if (!isAuthenticated || !timerStartTime || showLanding) return;
 
+  //   const interval = setInterval(() => {
+  //     const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+  //     const remaining = Math.max(0, 60 * 60 - elapsed);
+  //     setTimeRemaining(remaining);
+      
+  //     if (remaining === 0) {
+  //       clearInterval(interval);
+  //       toast.error('Time is up!');
+  //     }
+  //   }, 1000);
     const interval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
       const remaining = Math.max(0, 60 * 60 - elapsed);
@@ -135,44 +155,26 @@ export default function Home() {
       }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [timerStartTime, isAuthenticated]);
+     return () => clearInterval(interval);
+   }, [timerStartTime, isAuthenticated]);
 
   const fetchProblems = async () => {
     // Check cache first
     const cached = localStorage.getItem("problems_cache");
     if (cached) {
-      try {
-        setProblems(JSON.parse(cached));
-      } catch (e) {
-        console.warn("Failed to parse cached problems", e);
-      }
+      setProblems(JSON.parse(cached));
+      return;
     }
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-      const response = await fetch("/api/problems", {
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
+      const response = await fetch("/api/problems");
       if (!response.ok) throw new Error("Failed to fetch problems");
       const data = await response.json();
       setProblems(data);
       // Cache problems
       localStorage.setItem("problems_cache", JSON.stringify(data));
     } catch (error) {
-      if (error.name === "AbortError") {
-        console.error("Request timeout while fetching problems");
-        toast.error(
-          "Backend connection timeout. Please check if the Python server is running."
-        );
-      } else {
-        console.error("Failed to fetch problems:", error);
-      }
+      console.error("Failed to fetch problems:", error);
     }
   };
 
@@ -213,8 +215,6 @@ export default function Home() {
     const savedTeamInfo = localStorage.getItem("team_info");
     if (savedTeamInfo) {
       setTeamInfo(JSON.parse(savedTeamInfo));
-
-      // Start timer
       const savedStartTime = localStorage.getItem("timer_start_time");
       if (!savedStartTime) {
         const now = Date.now();
@@ -237,6 +237,10 @@ export default function Home() {
   };
 
   const goToProblem = (problemId) => {
+    if (problemId === 6 && ![1,2,3,4,5].every(isSolved)) {
+      toast.error("You must solve all other problems first to unlock the final problem!");
+      return;
+    }
     router.push(`/branch/${problemId}`);
   };
 
@@ -244,6 +248,11 @@ export default function Home() {
     return submissions[problemId] === "Accepted";
   };
 
+  // const formatTime = (seconds) => {
+  //   const mins = Math.floor(seconds / 60);
+  //   const secs = seconds % 60;
+  //   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  // };
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -267,8 +276,21 @@ export default function Home() {
   }
 
   // Wait for auth check to complete before showing login
+  // Show a minimal loading state instead of null to avoid blank screen
   if (!authChecked) {
-    return null; // or a loading spinner
+    return (
+      <div style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: '#1a1a1a',
+        color: 'white'
+      }}>
+        Loading...
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -282,24 +304,11 @@ export default function Home() {
       {/* Top Bar with Timer */}
       <div className={styles.topBar}>
         <div className={styles.topBarContent}>
-          <div className={styles.leftCluster}>
-            <button
-              className={styles.menuButton}
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              aria-label="Toggle problem list"
-            >
-              ☰
-            </button>
-            <div className={styles.teamInfo}>
-              <span className={styles.teamName}>
-                {teamInfo?.team_name || "Team"}
-              </span>
-              <span className={styles.solvedCount}>
-                {solvedCount} / 6 Solved
-              </span>
-            </div>
+          <div className={styles.teamInfo}>
+            <span className={styles.teamName}>{teamInfo?.team_name || 'Team'}</span>
+            <span className={styles.solvedCount}>{solvedCount} / 6 Solved</span>
           </div>
-          <div className={styles.timerContainer}>
+         <div className={styles.timerContainer}>
             <span className={styles.timerLabel}>Time Remaining:</span>
             <span
               className={
@@ -326,199 +335,221 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Sidebar */}
-      <div
-        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
-      >
-        <button
-          className={styles.closeButton}
-          onClick={() => setSidebarOpen(false)}
-        >
-          ×
-        </button>
-        <h2>Problems</h2>
-        <div className={styles.problemList}>
-          {problems.map((problem, idx) => (
-            <button
-              key={problem.id}
-              className={`${styles.problemButton} ${
-                isSolved(problem.id) ? styles.solved : ""
-              }`}
-              onClick={() => goToProblem(problem.id)}
-            >
-              {problemMap[problem.id] || `Problem ${idx + 1}`}
-              {isSolved(problem.id) && " ✓"}
-            </button>
-          ))}
-        </div>
-      </div>
-
+      
       {/* Map Container */}
       <div className={styles.mapContainer}>
         <div className={styles.mapImage}>
           <Image
-            src="/images/map_final.png"
+            src="/images/map-background.png"
             alt="Map"
             fill
             style={{ objectFit: "contain" }}
-            quality={100}
-            priority
           />
         </div>
 
-        {/* Paths Overlay */}
+        {/* Paths Overlay - Lantern Images */}
         <div className={styles.pathsOverlay}>
-          {problems.map((problem) => {
-            if (!isSolved(problem.id)) {
-              return null;
-            }
-            const pathId = `${problemMap[problem.id]}-path`;
-            return (
-              <div
-                key={pathId}
-                className={`${styles.pathContainer} ${styles.glow}`}
-              >
-                <svg
-                  width="528"
-                  height="567"
-                  viewBox="0 0 528 567"
-                  fill="none"
-                  preserveAspectRatio="xMidYMid meet"
-                >
-                  <g id="Group 1">
-                    {pathId === "mantis-path" && (
-                      <path
-                        id="mantis-path"
-                        d="M173.846 544.5L214.846 566L231.346 556.5L208.346 544.5L181.846 528.5L154.846 509.5L130.346 504L109.846 499.5H79.3456H27.8456H0.845642L6.34564 509.5H83.3456L124.846 515.5L147.846 523.5L173.846 544.5Z"
-                        stroke="url(#glowGradient)"
-                        strokeWidth="3"
-                      />
-                    )}
-                    {pathId === "monkey-path" && (
-                      <path
-                        id="monkey-path"
-                        d="M234.846 508.5L229.346 533L258.346 545.5L263.846 517.5L284.346 494L302.846 455.5V419L292.846 402.5L269.846 387L244.846 374.5L216.846 364.5L196.346 355L182.846 341.5L164.346 355L196.346 374.5L224.346 387L258.346 402.5L274.846 419V455.5L258.346 488.5L234.846 508.5Z"
-                        stroke="url(#glowGradient)"
-                        strokeWidth="3"
-                      />
-                    )}
-                    {pathId === "viper-path" && (
-                      <path
-                        id="viper-path"
-                        d="M348.846 454.5L306.346 462.5L312.346 483.5L348.846 473L375.846 462.5H422.346L461.846 454.5L456.346 443L422.346 448H390.346L348.846 454.5Z"
-                        stroke="url(#glowGradient)"
-                        strokeWidth="3"
-                      />
-                    )}
-                    {pathId === "crane-path" && (
-                      <path
-                        id="crane-path"
-                        d="M337.346 433.5L369.346 443L344.346 449.5L307.346 443L326.846 424.5L349.846 414L381.846 402.5L415.846 390L447.346 378L468.846 363V338.5V301L479.346 283.5L503.346 267L517.846 237H526.846V267L497.846 283.5L479.346 301L488.346 343.5L479.346 369.5L447.346 390L415.846 402.5L369.346 414L337.346 433.5Z"
-                        stroke="url(#glowGradient)"
-                        strokeWidth="3"
-                      />
-                    )}
-                    {pathId === "tigress-path" && (
-                      <path
-                        id="tigress-path"
-                        d="M226.346 334L214.846 363H233.846L240.846 349.5V316.5V287.5L233.846 256.5L226.346 241H201.346L169.346 221L139.346 200.5L103.846 186L65.8456 194L38.8456 205.5L19.8456 221L30.3456 230.5L65.8456 205.5H92.3456H127.846L145.346 221L169.346 241L201.346 250.5L214.846 256.5V282.5L226.346 303V334Z"
-                        stroke="url(#glowGradient)"
-                        strokeWidth="3"
-                      />
-                    )}
-                    {pathId === "shifu-path" && (
-                      <path
-                        id="shifu-path"
-                        d="M257.346 221L231.346 235.5V252.5L264.846 239L287.346 221L295.846 205.5L279.346 181L257.346 167.5L237.846 158V134L243.846 115.5L268.846 85.5L279.346 75V56.5L268.846 31.5L243.846 26.5V0.5H231.346V26.5L257.346 41L268.846 56.5L257.346 85.5L231.346 108L217.846 134L211.846 153L231.346 181L257.346 193L273.846 200.5L257.346 221Z"
-                        stroke="url(#glowGradient)"
-                        strokeWidth="3"
-                        fill="none"
-                      />
-                    )}
-                    <defs>
-                      <linearGradient
-                        id="glowGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop offset="0%" stopColor="#ffe082" />
-                        <stop offset="100%" stopColor="#ff6f61" />
-                      </linearGradient>
-                    </defs>
-                  </g>
-                </svg>
-              </div>
-            );
-          })}
+          <svg width="1440" height="1024" viewBox="0 0 1440 1024" fill="none" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%' }} xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink">
+            <defs>
+              {/* Pattern definitions for all lanterns */}
+              <pattern id="pattern0_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern1_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern2_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern3_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern4_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="matrix(0.002 0 0 0.00228947 0 -0.0723684)"/>
+              </pattern>
+              <pattern id="pattern5_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern6_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern7_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern8_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern9_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern10_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern11_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern12_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern13_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern14_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern15_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern16_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern17_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <pattern id="pattern18_35_11" patternContentUnits="objectBoundingBox" width="1" height="1">
+                <use xlinkHref="#image0_35_11" transform="scale(0.002)"/>
+              </pattern>
+              <image id="image0_35_11" className={styles.lanternGlow} width="500" height="500" preserveAspectRatio="none" href="/images/lantern.png"/>
+            </defs>
+            
+            {/* Tigress (Tree Path) - patterns 0-3 - Problem ID 5 */}
+            <g style={{ display: isSolved(5) ? 'block' : 'none' }}>
+              <rect x="482" y="311" width="83" height="83" fill="url(#pattern0_35_11)"/>
+              <rect x="576" y="352" width="83" height="83" fill="url(#pattern1_35_11)"/>
+              <rect x="623" y="420" width="87" height="87" fill="url(#pattern2_35_11)"/>
+              <rect x="630" y="507" width="80" height="80" fill="url(#pattern3_35_11)"/>
+            </g>
+            
+            {/* Mantis (Barracks Path) - patterns 4-5 - Problem ID 1 */}
+            <g style={{ display: isSolved(1) ? 'block' : 'none' }}>
+              <rect x="467" y="525" width="87" height="76" fill="url(#pattern4_35_11)"/>
+              <rect x="565" y="576" width="82" height="82" fill="url(#pattern5_35_11)"/>
+            </g>
+            
+            {/* Viper (Arena Path) - patterns 6-11 - Problem ID 3 */}
+            <g style={{ display: isSolved(3) ? 'block' : 'none' }}>
+              <rect x="667" y="773" width="80" height="80" fill="url(#pattern6_35_11)"/>
+              <rect x="646" y="882" width="81" height="81" fill="url(#pattern7_35_11)"/>
+              <rect x="576" y="677" width="85" height="85" fill="url(#pattern8_35_11)"/>
+              <rect x="680" y="596" width="81" height="81" fill="url(#pattern9_35_11)"/>
+              <rect x="770" y="616" width="82" height="82" fill="url(#pattern10_35_11)"/>
+              <rect x="864" y="658" width="80" height="80" fill="url(#pattern11_35_11)"/>
+            </g>
+            
+            {/* Crane (Mountain Path) - patterns 12-14 - Problem ID 4 */}
+            <g style={{ display: isSolved(4) ? 'block' : 'none' }}>
+              <rect x="710" y="379" width="81" height="81" fill="url(#pattern12_35_11)"/>
+              <rect x="811" y="352" width="81" height="81" fill="url(#pattern13_35_11)"/>
+              <rect x="892" y="291" width="81" height="81" fill="url(#pattern14_35_11)"/>
+            </g>
+            
+            {/* Shifu (Palace Path) - patterns 15-16 - Problem ID 6 */}
+            <g style={{ display: isSolved(6) ? 'block' : 'none' }}>
+              <rect x="680" y="272" width="81" height="81" fill="url(#pattern15_35_11)"/>
+              <rect x="613" y="195" width="81" height="81" fill="url(#pattern16_35_11)"/>
+            </g>
+            
+            {/* Monkey (Training Hall Path) - patterns 17-18 - Problem ID 2 */}
+            <g style={{ display: isSolved(2) ? 'block' : 'none' }}>
+              <rect x="892" y="522" width="81" height="81" fill="url(#pattern17_35_11)"/>
+              <rect x="791" y="515" width="81" height="81" fill="url(#pattern18_35_11)"/>
+            </g>
+          </svg>
         </div>
 
         {/* Hotspots Overlay */}
         <div className={styles.hotspotsOverlay}>
-          {problems.map((problem) => {
-            const hotspotId = `${problemMap[problem.id]}-hotspot`;
-            // Hotspot coordinates from the provided SVG (viewBox 804x759)
-            // Note: monkey-hotspot is not in the SVG, using approximate position based on monkey-path
-            const hotspots = {
-              "mantis-hotspot": { cx: 97.5, cy: 686, rx: 80.5, ry: 73 },
-              "monkey-hotspot": { cx: 252, cy: 527.5, rx: 99, ry: 54.5 },
-              "viper-hotspot": { cx: 699, cy: 666, rx: 92, ry: 76 },
-              "crane-hotspot": { cx: 709.5, cy: 378, rx: 94.5, ry: 95 },
-              "tigress-hotspot": { cx: 89, cy: 423.5, rx: 89, ry: 72.5 },
-              "shifu-hotspot": { cx: 397, cy: 123.5, rx: 183, ry: 123.5 },
-            };
-            const coords = hotspots[hotspotId];
-            if (!coords) return null;
+          <svg width="1440" height="1024" viewBox="0 0 1440 1024" fill="none" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%' }}>
+            {/* Render hotspots for all problems, ensuring mantis is visible */}
+            {problems.map((problem) => {
+              const hotspotId = `${problemMap[problem.id]}-hotspot`;
+              // Hotspot path data from the SVG file (1440x1024 coordinates)
+              const hotspotPaths = {
+                'mantis-hotspot': 'M321.681 708.6L300.478 706.4L275.42 671.2V669L271.565 664.6L269.638 653.6L267.71 644.8L265.783 640.4V629.4V618.4L263.855 609.6V603V596.4V592V587.6V578.8V576.6L260 554.6V545.8V541.4V539.2L261.928 519.4L271.565 508.4L277.348 504H286.986H300.478L310.116 506.2L313.971 510.6V512.8V517.2V521.6L315.899 523.8H317.826L323.609 521.6V519.4H325.536V517.2L335.174 512.8L346.739 499.6L354.449 493L358.304 488.6H362.159L369.87 486.4H379.507H383.362H389.145L391.072 484.2H394.928L400.71 482H408.42H414.203H427.696H437.333H448.899H452.754L462.391 486.4L470.101 488.6L475.884 493L481.667 499.6L487.449 504L493.232 510.6L497.087 519.4V526V530.4V539.2L499.014 556.8L502.87 567.8L504.797 576.6L508.652 581L514.435 589.8L518.29 592L520.217 594.2H526V598.6V607.4L524.072 649.2L522.145 660.2L520.217 666.8V669L518.29 671.2L514.435 677.8L512.507 682.2L510.58 686.6L506.725 691L502.87 693.2H500.942L495.159 695.4L487.449 702L470.101 710.8L460.464 715.2L450.826 719.6L445.043 724H439.261H433.478H421.913H412.275H404.565L396.855 721.8L389.145 717.4H387.217L377.58 715.2L369.87 713H367.942L364.087 710.8L356.377 708.6H352.522H348.667H346.739H340.957H337.101H329.391H321.681Z',
+                'monkey-hotspot': 'M1127.98 424.17H1114.87L1084.9 420H1077.41H1069.92H1066.17H1060.56H1058.68L1049.32 422.085H1045.57L1038.08 424.17L1034.33 426.255L1013.73 442.936L1009.98 445.021L1006.24 449.191H1004.37L1002.49 451.277L1000.62 457.532L995 461.702V472.128V480.468V488.809V490.894V492.979V497.149L996.873 503.404L998.746 509.66V515.915L1000.62 518L1002.49 520.085V526.34L1004.37 532.596L1008.11 540.936L1013.73 557.617L1019.35 568.043L1026.84 578.468L1028.71 580.553V584.723H1030.59L1032.46 586.809V590.979L1038.08 599.319L1039.95 607.66L1045.57 616H1049.32H1053.06H1060.56H1066.17H1073.67H1081.16L1086.78 613.915H1090.52L1096.14 607.66L1101.76 605.574L1103.63 603.489L1105.51 601.404L1109.25 599.319H1113H1114.87H1118.62H1124.24H1133.6H1142.97H1150.46H1152.33H1163.57H1172.94L1180.43 597.234H1182.3H1187.92H1193.54H1197.29H1204.78H1212.27L1216.02 593.064H1217.89L1219.76 590.979H1221.63V588.894H1223.51V586.809L1225.38 582.638L1231 570.128V561.787V551.362V545.106V543.021V538.851V532.596L1227.25 528.426V524.255L1225.38 518V515.915V513.83H1223.51V509.66L1219.76 499.234H1217.89V497.149L1216.02 490.894L1214.14 486.723V478.383V476.298L1212.27 474.213V472.128V467.957L1210.4 465.872H1208.52L1206.65 461.702V459.617H1204.78L1202.9 455.447L1197.29 451.277L1187.92 442.936L1186.05 440.851L1182.3 438.766L1180.43 436.681L1176.68 432.511L1174.81 430.426H1172.94L1169.19 428.34L1165.44 426.255H1161.7H1159.83H1152.33H1150.46H1148.59H1146.71H1141.1L1137.35 424.17H1127.98Z',
+                'viper-hotspot': 'M1028.56 660.612H1021.87L983.943 689.614L981.712 694.076L977.251 698.538L970.558 700.769L966.096 707.462L963.865 709.693L961.634 711.924L954.941 714.155L950.479 718.617L946.017 720.847L930.401 732.002L928.17 736.464L925.939 738.695V745.388V747.619V749.85V752.081V754.312V758.773V761.004L928.17 767.697L930.401 776.621L932.632 787.776L939.325 798.93L943.786 803.392L946.017 805.623L950.479 807.854L954.941 812.316H959.403L968.327 819.009L970.558 823.471L977.251 825.702H981.712L988.405 830.163L999.56 836.856L1010.71 843.549L1026.33 854.704L1037.49 863.627L1044.18 865.858H1059.8H1066.49H1075.41H1086.57H1099.95L1113.34 863.627L1122.26 861.396H1128.95L1140.11 856.935L1155.73 850.242L1164.65 845.78L1175.8 843.549L1186.96 841.318L1200.34 839.087L1207.04 836.856L1215.96 830.163L1218.19 825.702V816.778L1220.42 810.085L1222.65 796.699V785.545V778.852V774.39V767.697V758.773V749.85V738.695V725.309L1218.19 711.924L1215.96 707.462V705.231L1213.73 700.769L1211.5 691.845L1204.81 673.998V669.536L1202.58 667.305L1200.34 665.074V662.843L1198.11 660.612V656.15L1195.88 649.458V647.227V642.765L1193.65 640.534V636.072L1191.42 627.148L1189.19 624.917L1184.73 620.455H1182.5H1180.27H1178.03H1175.8H1169.11H1164.65H1162.42H1157.96H1155.73H1153.49H1151.26H1146.8H1144.57H1142.34H1140.11H1135.65H1131.19H1128.95L1126.72 622.686L1124.49 624.917H1120.03L1111.11 627.148H1106.64H1099.95L1093.26 629.379H1088.8H1084.34H1079.87H1077.64L1073.18 631.61L1068.72 633.841H1066.49L1062.03 636.072L1053.1 644.996H1050.87V647.227V649.458H1046.41L1044.18 653.919H1041.95L1028.56 660.612Z',
+                'crane-hotspot': 'M919.404 221.289L912.968 229.156L899.38 239.168L895.805 242.744L894.374 244.889L890.084 249.18L887.938 252.755L887.223 253.471L884.362 256.331L882.217 259.907L877.211 263.482L868.629 269.919L863.624 275.64L860.048 285.652V291.373V298.524L862.908 303.53L865.769 308.536L867.199 309.251L869.345 310.681L875.066 312.112H880.787H887.223H892.229H896.52L901.526 309.966L904.386 306.391L907.247 302.815L909.392 302.1L912.968 299.954L916.544 299.239L925.84 297.809L935.852 299.239L950.155 306.391V313.542L951.585 328.56L953.015 331.42V332.135V332.851H953.731V333.566L954.446 335.711L955.876 338.572L957.306 340.717L958.021 346.438L958.736 351.444V354.305V355.02V355.735V357.165L959.452 357.88L961.597 359.311L962.312 360.026V361.456L963.027 362.171H963.742V362.886L964.458 364.317H965.173H969.464H975.185H986.627L994.493 365.032L1003.07 367.177L1009.51 370.038L1018.09 370.753H1025.96H1034.54H1039.55H1046.7L1053.13 369.322L1053.85 367.177V365.747V360.026L1052.42 352.159V350.014H1053.13H1056.71H1062.43L1066.72 351.444L1070.3 352.159H1079.59H1088.89H1094.61H1099.62H1108.2H1120.36H1131.08H1146.1L1153.97 351.444L1163.27 349.299L1170.42 348.584L1180.43 346.438H1186.86L1194.73 343.578L1201.88 341.432L1206.17 336.426L1206.89 330.705V327.845L1206.17 326.414V323.554L1204.74 318.548L1198.31 307.106L1194.02 300.669L1191.87 295.664L1189.01 289.942L1186.86 285.652L1183.29 279.931L1180.43 275.64L1179 273.494L1176.14 269.919L1173.99 267.058L1169.7 262.767L1164.7 257.761L1159.69 255.616L1151.11 252.755L1141.81 248.465L1135.37 244.174L1128.22 241.313L1124.65 239.168L1115.35 236.307L1106.05 234.877L1100.33 233.447L1093.18 231.301L1086.75 230.586L1081.02 229.871L1075.3 229.156H1069.58L1063.15 227.726L1053.85 221.289L1052.42 216.999V212.708V204.841L1053.85 199.835L1054.56 191.969V186.248V183.387V180.527V177.666L1053.85 175.521L1050.99 170.515L1048.84 167.654L1045.27 166.224L1044.55 164.794L1038.83 161.933L1036.69 159.788L1035.97 159.073L1029.53 157.642L1024.53 155.497H1017.38L1010.94 156.212L1006.65 157.642L998.069 161.218L993.778 162.648H987.342L982.336 163.364L978.045 164.079L975.185 166.224V167.654V171.23V174.091L976.615 178.381L978.045 181.957L980.191 186.248V189.824V192.684V194.114V195.545V198.405L979.475 201.981L978.76 204.126L977.33 205.557L975.185 208.417L972.324 210.562L968.033 212.708L965.173 214.138L962.312 214.853L955.161 216.284H951.585H948.725H944.434H940.858H935.852L932.276 216.999L930.131 217.714H927.986L926.555 219.144L922.98 219.859L919.404 221.289Z',
+                'tigress-hotspot': 'M339.042 232H311.169L287.585 266.381V271.81V282.667L283.297 298.952V306.19L281.153 309.81V311.619L274.72 324.286L268.288 331.524L264 335.143V342.381V347.81V353.238V360.476V376.762L266.144 385.81V396.667V402.095L268.288 405.714L270.432 409.333V412.952L272.576 414.762L274.72 416.571L276.864 420.19L279.008 422V423.81L283.297 429.238L287.585 434.667L294.017 441.905L296.161 450.952L300.449 458.19L306.881 460H311.169H317.602H328.322H341.186H349.763H354.051L358.339 458.19H364.771L366.915 456.381H369.059H373.347L386.212 454.571L392.644 452.762L401.22 450.952H405.508H414.085L418.373 449.143L429.093 447.333L439.814 438.286L446.246 434.667L452.678 429.238L459.11 425.619V423.81L463.398 418.381L465.542 414.762L467.686 412.952V411.143V407.524H469.831V403.905L474.119 394.857L478.407 387.619L482.695 384L491.271 374.952L493.415 371.333L497.703 369.524L499.847 365.905L504.136 360.476L506.28 353.238L508.424 347.81L512.712 338.762L517 329.714V327.905V317.048V315.238V309.81V306.19V300.762L514.856 298.952L510.568 293.524L506.28 286.286L501.992 282.667L499.847 277.238L495.559 273.619L493.415 271.81L491.271 268.19H489.127V266.381H486.983L482.695 264.571L480.551 262.762L476.263 260.952L474.119 259.143L465.542 257.333L456.966 255.524L452.678 253.714L448.39 251.905L441.958 250.095L431.237 244.667L409.797 235.619L401.22 233.81L392.644 232H386.212H379.78H375.492H364.771H362.627H360.483H354.051H351.907H345.475H339.042Z',
+                'shifu-hotspot': 'M522.632 177V189.643L585.579 198.071H592.842H595.263H600.105H604.947H607.368H619.474H629.158H638.842H646.105L653.368 200.179H655.789H660.632H667.895H670.316H672.737H680L684.842 206.5H689.684L692.105 208.607H694.526H696.947L699.368 212.821L701.789 214.929H709.053L713.895 219.143L721.158 221.25L728.421 223.357L740.526 227.571L755.053 233.893L769.579 236H774.421H781.684H786.526H788.947H798.632H810.737H820.421H827.684L837.368 233.893L839.789 229.679L842.211 223.357L847.053 212.821L854.316 204.393L859.158 198.071L861.579 193.857L864 187.536V172.786V164.357V155.929V143.286V134.857V132.75V130.643V126.429V124.321V120.107L861.579 101.143L859.158 96.9286L854.316 88.5L844.632 80.0714L842.211 75.8571L837.368 69.5357L834.947 61.1071L832.526 56.8929L827.684 48.4643L822.842 40.0357L813.158 31.6071L810.737 29.5V27.3929L808.316 25.2857L801.053 21.0714H798.632L793.789 18.9643L784.105 12.6429L774.421 4.21429L764.737 2.10714L755.053 0H747.789H738.105H735.684H730.842H723.579H718.737H709.053L706.632 2.10714H696.947L687.263 4.21429H682.421L670.316 6.32143H665.474H660.632H655.789H650.947H641.263H631.579H624.316H619.474H609.789L604.947 8.42857H595.263L590.421 12.6429L578.316 16.8571L571.053 18.9643H568.632L558.947 25.2857L554.105 29.5V33.7143V35.8214V40.0357L551.684 42.1429V44.25V46.3571L549.263 56.8929L537.158 73.75L532.316 77.9643L527.474 80.0714L510.526 90.6071L503.263 94.8214L496 103.25V105.357L498.421 111.679L500.842 115.893V118H503.263V120.107L510.526 126.429L517.789 130.643V134.857L520.211 139.071L522.632 147.5V149.607V151.714V162.25V164.357V170.679V177Z'
+              };
+              const pathData = hotspotPaths[hotspotId];
+              if (!pathData) {
+                console.warn(`Hotspot path not found for: ${hotspotId}`);
+                return null;
+              }
 
-            return (
-              <div
-                key={hotspotId}
-                className={styles.hotspot}
-                style={{
-                  position: "absolute",
-                  left: `${(coords.cx / 804) * 100}%`,
-                  top: `${(coords.cy / 759) * 100}%`,
-                  width: `${((coords.rx * 2) / 804) * 100}%`,
-                  height: `${((coords.ry * 2) / 759) * 100}%`,
-                }}
-                onClick={() => goToProblem(problem.id)}
-                title={problem.title}
-              />
-            );
-          })}
+              return (
+                <path
+                  key={hotspotId}
+                  id={hotspotId}
+                  d={pathData}
+                  className={styles.hotspotPath}
+                  onClick={() => goToProblem(problem.id)}
+                  title={problem.title}
+                  fill="transparent"
+                  stroke="transparent"
+                  strokeWidth="3"
+                  style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                />
+              );
+            })}
+          </svg>
         </div>
       </div>
       {/* Leaderboard Modal (placeholder local view) */}
       {showLeaderboard && (
         <div className={styles.popupOverlay}>
           <div className={styles.popup}>
-            <button
-              className={styles.popupClose}
-              onClick={() => setShowLeaderboard(false)}
-            >
-              ×
-            </button>
-            <h2>Leaderboard</h2>
-            <div className={styles.leaderboard}>
-              <div className={styles.leaderRow}>
-                <span className={styles.leaderTeam}>
-                  {teamInfo?.team_name || "Your Team"}
-                </span>
-                <span className={styles.leaderSolved}>
-                  {solvedCount} solved
-                </span>
-                <span className={styles.leaderTime}>
-                  {formatTime(timeRemaining)} left
-                </span>
-              </div>
-              <div className={styles.leaderInfoNote}>
-                Live global leaderboard can plug into a backend endpoint later.
-              </div>
+            <button className={styles.popupClose} onClick={() => {setShowPopup(false); setShowSolutionSection(false);}}>×</button>
+            <h2>{selectedProblem.title}</h2>
+            
+            <div className={styles.popupContent} style={{gridTemplateColumns: showSolutionSection ? '1fr 1fr' : '1fr'}}>
+              {buggyCode && (
+                <div className={styles.buggyCodeSection}>
+                  <h3>Buggy Code:</h3>
+                  <pre className={styles.codeBlock}>{buggyCode}</pre>
+                  {!showSolutionSection && (
+                    <button 
+                      onClick={() => setShowSolutionSection(true)}
+                      className={styles.showSolutionButton}
+                    >
+                      Submit Your Solution
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {showSolutionSection && (
+                <div className={styles.solutionSection}>
+                  <h3>Your Solution:</h3>
+                  <select 
+                    value={language} 
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className={styles.languageSelect}
+                  >
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="c">C</option>
+                    <option value="cpp">C++</option>
+                    <option value="java">Java</option>
+                  </select>
+                  <textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    className={styles.codeInput}
+                    placeholder="Paste your corrected code here..."
+                    rows={15}
+                  />
+                  <button onClick={handleSubmit} className={styles.submitButton}>
+                    Submit Solution
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
     </div>
   );
-}
+  }
+
