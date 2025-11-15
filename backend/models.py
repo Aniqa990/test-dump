@@ -35,5 +35,18 @@ class TestCase(Base):
     problem_id = Column(Integer, ForeignKey("problems.id"))
     input_data = Column(Text)
     expected_output = Column(Text)
+    is_hidden = Column(Integer, default=0)  # 0 = visible, 1 = hidden
 
+    problem = relationship("Problem")
+
+class CodeDraft(Base):
+    __tablename__ = "code_drafts"
+
+    team_id = Column(Integer, ForeignKey("teams.id"), primary_key=True)
+    problem_id = Column(Integer, ForeignKey("problems.id"), primary_key=True)
+    code = Column(Text)
+    language = Column(String)
+    saved_at = Column(DateTime)
+
+    team = relationship("Team")
     problem = relationship("Problem")

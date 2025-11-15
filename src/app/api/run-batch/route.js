@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
-    const { language, code, stdin } = await req.json();
+    const { language, code, test_cases } = await req.json();
 
-    if (!language || !code) {
-      return NextResponse.json({ error: 'Language and code are required' }, { status: 400 });
+    if (!language || !code || !test_cases) {
+      return NextResponse.json({ error: 'Language, code, and test_cases are required' }, { status: 400 });
     }
 
-    // Forward the request to the Python backend piston execution
-    const res = await fetch('http://127.0.0.1:8001/run', {
+    // Forward the request to the Python backend
+    const res = await fetch('http://127.0.0.1:8001/run-batch', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -17,15 +17,14 @@ export async function POST(req) {
       body: JSON.stringify({
         language,
         code,
-        stdin: stdin || '',
+        test_cases,
       }),
     });
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({ error: 'Backend returned a non-JSON error' }));
       console.error("Backend error:", errorData);
-      // Hide actual error details from participants
-      return NextResponse.json({ error: 'Failed to execute code' }, { status: res.status });
+      return NextResponse.json({ error: errorData.detail || 'Backend error' }, { status: res.status });
     }
 
     const data = await res.json();

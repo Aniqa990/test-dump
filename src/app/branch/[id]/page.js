@@ -147,6 +147,11 @@ export default function BranchPage() {
   const [loadingProblem, setLoadingProblem] = useState(true);
   const [testCases, setTestCases] = useState([]);
   const submissionsFetchWarned = useRef(false);
+  
+  // Undo/Redo history management
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const isUndoRedo = useRef(false);
 
 
   useEffect(() => {
@@ -181,7 +186,7 @@ export default function BranchPage() {
   }, [router]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !teamInfo) return;
     let cached = null;
     try {
       const stored = localStorage.getItem("problems_cache");
@@ -192,34 +197,42 @@ export default function BranchPage() {
       console.error("Failed to parse cached problems", error);
     }
 
-    const trySetProblem = (list) => {
+    const trySetProblem = async (list) => {
       if (!Array.isArray(list)) return false;
       const found = list.find((p) => Number(p.id) === problemId);
       if (found) {
         setProblem(found);
+        const pythonCode = found.buggy_file_blob || "";
+        
+        // Use template
         const initialLanguage = "python";
         setLanguage(initialLanguage);
-        const pythonCode = found.buggy_file_blob || "";
-        setCode(generateCodeTemplate(pythonCode, initialLanguage, problemId));
+        const templateCode = generateCodeTemplate(pythonCode, initialLanguage, problemId);
+        resetHistory(); // Reset undo/redo history when loading template
+        setCode(templateCode);
         setStdin(""); // Clear stdin - user will provide their own input
         return true;
       }
       return false;
     };
 
-    if (trySetProblem(cached)) {
-      setLoadingProblem(false);
-      return;
-    }
+    const initializeProblem = async () => {
+      if (cached) {
+        const result = await trySetProblem(cached);
+        if (result) {
+          setLoadingProblem(false);
+          return;
+        }
+      }
 
-    const fetchProblems = async () => {
       setLoadingProblem(true);
       try {
         const res = await fetch("/api/problems");
         if (!res.ok) throw new Error("Failed to load problems");
         const data = await res.json();
         localStorage.setItem("problems_cache", JSON.stringify(data));
-        if (!trySetProblem(data)) {
+        const result = await trySetProblem(data);
+        if (!result) {
           toast.error("Challenge not found. Redirecting to the map.");
           router.replace("/");
         }
@@ -231,15 +244,16 @@ export default function BranchPage() {
       }
     };
 
-    fetchProblems();
-  }, [isAuthenticated, problemId, router]);
+    initializeProblem();
+  }, [isAuthenticated, problemId, router, teamInfo]);
 
-  // Fetch test cases when problem is loaded
+  // Fetch test cases when problem is loaded (only visible ones)
   useEffect(() => {
     if (!problem || !problem.id) return;
 
     const fetchTestCases = async () => {
       try {
+        // Only fetch visible test cases (not hidden ones)
         const res = await fetch(`/api/testcases?problem_id=${problem.id}`);
         if (!res.ok) throw new Error("Failed to load test cases");
         const data = await res.json();
@@ -251,6 +265,7 @@ export default function BranchPage() {
 
     fetchTestCases();
   }, [problem]);
+
 
   useEffect(() => {
     if (!isAuthenticated || !teamInfo) return;
@@ -397,41 +412,52 @@ export default function BranchPage() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Failed to execute code.");
+        // Hide actual error details
+        throw new Error("Failed to execute code.");
       }
 
       // Handle different response formats from piston
       let runOutput = "";
-      if (data.run) {
-        if (data.run.stdout) {
-          runOutput = data.run.stdout;
-        } else if (data.run.stderr) {
-          runOutput = data.run.stderr;
-        } else if (data.run.output) {
-          runOutput = data.run.output;
-        }
-      } else if (data.compile) {
-        if (data.compile.stdout) {
+      let hasError = false;
+      
+      // Check for compilation errors first
+      if (data.compile) {
+        if (data.compile.stderr) {
+          // Compilation error - hide details
+          hasError = true;
+        } else if (data.compile.stdout) {
           runOutput = data.compile.stdout;
-        } else if (data.compile.stderr) {
-          runOutput = data.compile.stderr;
         } else if (data.compile.output) {
           runOutput = data.compile.output;
         }
       }
-
-      if (!runOutput && data.message) {
-        runOutput = data.message;
+      
+      // Check for runtime errors
+      if (data.run) {
+        if (data.run.stderr) {
+          // Runtime error - hide details
+          hasError = true;
+        } else if (data.run.stdout) {
+          runOutput = data.run.stdout;
+        } else if (data.run.output) {
+          runOutput = data.run.output;
+        }
       }
 
-      if (!runOutput) {
+      // If there's an error, show generic message instead of actual error
+      if (hasError) {
+        runOutput = "An error occurred while executing your code.";
+      } else if (!runOutput && data.message) {
+        runOutput = data.message;
+      } else if (!runOutput) {
         runOutput = "No output produced.";
       }
 
       setOutput(runOutput);
     } catch (error) {
       console.error("Run error:", error);
-      setOutput(`Error: ${error.message || "Failed to execute code."}`);
+      // Hide actual error details - show generic message
+      setOutput("An error occurred while executing your code.");
     } finally {
       setIsRunning(false);
     }
@@ -443,7 +469,10 @@ export default function BranchPage() {
       return;
     }
 
-    if (!testCases || testCases.length === 0) {
+    // Filter only visible test cases (not hidden)
+    const visibleTestCases = testCases.filter(tc => !tc.is_hidden);
+
+    if (!visibleTestCases || visibleTestCases.length === 0) {
       toast.error("No test cases available for this problem.");
       return;
     }
@@ -452,69 +481,57 @@ export default function BranchPage() {
     setOutput("");
 
     try {
-      const results = [];
+      // Prepare test cases for batch request
+      const testCasesForBatch = visibleTestCases.map(tc => ({
+        input: tc.input_data || "",
+        expected_output: tc.expected_output || ""
+      }));
+
+      // Send batch request
+      const response = await fetch("/api/run-batch", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          language,
+          code,
+          test_cases: testCasesForBatch,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to run test cases");
+      }
+
+      // Process results
+      const results = data.results || [];
       let passedCount = 0;
       let failedCount = 0;
 
-      for (let i = 0; i < testCases.length; i++) {
-        const testCase = testCases[i];
-
-        const response = await fetch("/api/run", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            language,
-            code,
-            stdin: testCase.input_data || "",
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          results.push({
-            testCase: i + 1,
-            input: testCase.input_data,
-            expected: testCase.expected_output?.trim(),
-            actual: `Error: ${data.error || "Execution failed"}`,
-            passed: false,
-          });
-          failedCount++;
-          continue;
-        }
-
-        // Get output from response
-        let actualOutput = "";
-        if (data.run) {
-          actualOutput = (data.run.stdout || data.run.stderr || data.run.output || "").trim();
-        } else if (data.compile) {
-          actualOutput = (data.compile.stdout || data.compile.stderr || data.compile.output || "").trim();
-        }
-
-        const expectedOutput = (testCase.expected_output || "").trim();
-        const passed = actualOutput === expectedOutput;
-
+      const formattedResults = results.map((result, i) => {
+        const passed = result.passed;
         if (passed) {
           passedCount++;
         } else {
           failedCount++;
         }
 
-        results.push({
+        return {
           testCase: i + 1,
-          input: testCase.input_data,
-          expected: expectedOutput,
-          actual: actualOutput || "(no output)",
+          input: result.input,
+          expected: result.expected_output,
+          actual: result.error ? "Error occurred" : (result.actual_output || "(no output)"),
           passed,
-        });
-      }
+        };
+      });
 
       // Format output
-      let outputText = `Test Results: ${passedCount}/${testCases.length} passed\n\n`;
+      let outputText = `Test Results: ${passedCount}/${visibleTestCases.length} passed\n\n`;
 
-      results.forEach((result) => {
+      formattedResults.forEach((result) => {
         outputText += `Test Case ${result.testCase}:\n`;
         outputText += `  Input: ${result.input}\n`;
         outputText += `  Expected: ${result.expected}\n`;
@@ -524,14 +541,14 @@ export default function BranchPage() {
 
       setOutput(outputText);
 
-      if (passedCount === testCases.length) {
-        toast.success(`All ${testCases.length} test cases passed! 🎉`);
+      if (passedCount === visibleTestCases.length) {
+        toast.success(`All ${visibleTestCases.length} test cases passed! 🎉`);
       } else {
         toast.error(`${failedCount} test case(s) failed.`);
       }
     } catch (error) {
       console.error("Test cases error:", error);
-      setOutput(`Error: ${error.message || "Failed to run test cases."}`);
+      setOutput("An error occurred while running test cases.");
       toast.error("Failed to run test cases.");
     } finally {
       setIsRunningTests(false);
@@ -596,15 +613,8 @@ export default function BranchPage() {
   const formatOutput = (outputText) => {
     if (!outputText) return null;
 
-    // Check for errors
-    if (outputText.includes("Error:") ||
-      outputText.includes("Traceback") ||
-      outputText.includes("Exception") ||
-      outputText.includes("ValueError") ||
-      outputText.includes("SyntaxError") ||
-      outputText.includes("TypeError") ||
-      outputText.includes("NameError") ||
-      outputText.includes("RuntimeError")) {
+    // Check if it's our generic error message (errors are already hidden)
+    if (outputText.includes("An error occurred") || outputText.includes("Error occurred")) {
       return <span className={styles.outputError}>{outputText}</span>;
     }
 
@@ -633,6 +643,100 @@ export default function BranchPage() {
     }
   };
 
+  // Handle code changes with undo/redo support
+  const handleCodeChange = (newCode) => {
+    if (isUndoRedo.current) {
+      // Don't add to history if this is an undo/redo operation
+      setCode(newCode);
+      return;
+    }
+
+    // Clear redo stack when new change is made
+    redoStack.current = [];
+    
+    // Add current code to undo stack before updating
+    if (code !== newCode) {
+      undoStack.current.push(code);
+      
+      // Limit history size to prevent memory issues (keep last 50 states)
+      if (undoStack.current.length > 50) {
+        undoStack.current.shift();
+      }
+    }
+
+    setCode(newCode);
+  };
+
+  // Undo function
+  const handleUndo = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (undoStack.current.length === 0) {
+      return;
+    }
+
+    // Move current code to redo stack
+    redoStack.current.push(code);
+    
+    // Get previous state from undo stack
+    const previousCode = undoStack.current.pop();
+    
+    isUndoRedo.current = true;
+    setCode(previousCode);
+    
+    // Reset flag after state update
+    setTimeout(() => {
+      isUndoRedo.current = false;
+    }, 0);
+  };
+
+  // Redo function
+  const handleRedo = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (redoStack.current.length === 0) {
+      return;
+    }
+
+    // Move current code to undo stack
+    undoStack.current.push(code);
+    
+    // Get next state from redo stack
+    const nextCode = redoStack.current.pop();
+    
+    isUndoRedo.current = true;
+    setCode(nextCode);
+    
+    // Reset flag after state update
+    setTimeout(() => {
+      isUndoRedo.current = false;
+    }, 0);
+  };
+
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e) => {
+    // Ctrl+Z or Cmd+Z for undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      handleUndo(e);
+    }
+    // Ctrl+Y or Ctrl+Shift+Z or Cmd+Shift+Z for redo
+    else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      handleRedo(e);
+    }
+  };
+
+  // Reset history when code is set externally (e.g., language change)
+  const resetHistory = () => {
+    undoStack.current = [];
+    redoStack.current = [];
+  };
+
   const solvedCount = useMemo(
     () => Object.values(submissions).filter((status) => status === "Accepted").length,
     [submissions]
@@ -656,26 +760,35 @@ export default function BranchPage() {
         <div className={styles.topBarContent}>
           <div className={styles.leftGroup}>
             <button className={styles.backButton} onClick={() => router.push("/")}>
-              ← Map
+              <span className={styles.backIcon}>←</span>
+              <span>Map</span>
             </button>
+            <div className={styles.divider}></div>
             <div className={styles.teamInfo}>
               <span className={styles.teamName}>{teamInfo?.team_name || "Team"}</span>
-              <span className={styles.solvedCount}>{solvedCount} / 6 Solved</span>
+            </div>
+            <div className={styles.solvedBadge}>
+              <span className={styles.solvedCount}>{solvedCount} / 6</span>
+              <span className={styles.solvedLabel}>Solved</span>
             </div>
           </div>
-          <div className={styles.timerCluster}>
-            <span className={styles.timerLabel}>Time Remaining:</span>
-            <span
-              className={
-                timeRemaining < 300 ? styles.timerWarning : styles.timerValue
-              }
-            >
-              {formatTime(timeRemaining)}
-            </span>
+          <div className={styles.centerGroup}>
+            <div className={styles.timerCluster}>
+              <span className={styles.timerLabel}>Time Remaining</span>
+              <span
+                className={
+                  timeRemaining < 300 ? styles.timerWarning : styles.timerValue
+                }
+              >
+                {formatTime(timeRemaining)}
+              </span>
+            </div>
           </div>
-          <button className={styles.logoutButton} onClick={handleLogout}>
-            Logout
-          </button>
+          <div className={styles.rightGroup}>
+            <button className={styles.logoutButton} onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -694,19 +807,6 @@ export default function BranchPage() {
           ) : null}
         </div>
         <div className={styles.sceneOverlay} />
-
-        <div className={styles.topActions}>
-          <button className={styles.glassButton} onClick={handleOpenProblemPdf}>
-            📜 Problem Scroll
-          </button>
-          <button
-            className={`${styles.glassButton} ${showEditor ? styles.activeButton : ""
-              }`}
-            onClick={() => setShowEditor((prev) => !prev)}
-          >
-            💻 Code Editor
-          </button>
-        </div>
 
         <div className={styles.locationCard}>
           <div className={styles.cardBadge} style={{ borderColor: meta.accent }}>
@@ -729,9 +829,23 @@ export default function BranchPage() {
               <span className={styles.metaValue}>Multi-language</span>
             </div>
           </div>
+          <div className={styles.cardActions}>
+            <button className={styles.glassButton} onClick={handleOpenProblemPdf}>
+              📜 Problem Scroll
+            </button>
+            <button
+              className={`${styles.glassButton} ${showEditor ? styles.activeButton : ""
+                }`}
+              onClick={() => setShowEditor((prev) => !prev)}
+            >
+              💻 Code Editor
+            </button>
+          </div>
         </div>
 
-        <button className={styles.hintButton}>🧠 Hints</button>
+        <button className={styles.hintButton} title="Hints">
+          <span className={styles.hintIcon}>💡</span>
+        </button>
 
         {showEditor && (
           <div
@@ -756,31 +870,30 @@ export default function BranchPage() {
               </div>
 
               <div className={styles.languageSelector}>
-                <label htmlFor="language-select">Language</label>
-                <select
-                  id="language-select"
-                  className={styles.languageDropdown}
-                  value={language}
-                  onChange={(e) => {
-                    const newLanguage = e.target.value;
-                    setLanguage(newLanguage);
-                    // Update code template when language changes
-                    if (problem?.buggy_file_blob) {
-                      const newCode = generateCodeTemplate(
-                        problem.buggy_file_blob,
-                        newLanguage,
-                        problemId
-                      );
-                      setCode(newCode);
-                    }
-                  }}
-                >
+                <div className={styles.languageTabs}>
                   {languageOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <button
+                      key={option.value}
+                      className={`${styles.languageTab} ${language === option.value ? styles.languageTabActive : ''}`}
+                      onClick={() => {
+                        const newLanguage = option.value;
+                        setLanguage(newLanguage);
+                        // Update code template when language changes
+                        if (problem?.buggy_file_blob) {
+                          const newCode = generateCodeTemplate(
+                            problem.buggy_file_blob,
+                            newLanguage,
+                            problemId
+                          );
+                          resetHistory(); // Reset undo/redo history on language change
+                          setCode(newCode);
+                        }
+                      }}
+                    >
                       {option.label}
-                    </option>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div className={styles.editorLayout}>
@@ -820,7 +933,8 @@ export default function BranchPage() {
                         ref={codeEditorRef}
                         className={styles.codeEditor}
                         value={code}
-                        onChange={(e) => setCode(e.target.value)}
+                        onChange={(e) => handleCodeChange(e.target.value)}
+                        onKeyDown={handleKeyDown}
                         onScroll={handleCodeScroll}
                         spellCheck={false}
                         placeholder="// Start coding here..."

@@ -1,6 +1,6 @@
 
 from database import SessionLocal, engine
-from models import Base, Team, Problem, TestCase
+from models import Base, Team, Problem, TestCase, CodeDraft
 import bcrypt
 
 # Create all tables in the database

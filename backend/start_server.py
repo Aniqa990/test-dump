@@ -11,6 +11,7 @@ if __name__ == "__main__":
     print("📖 API docs will be available at: http://127.0.0.1:8001/docs")
     print("Press Ctrl+C to stop the server")
     print("-" * 50)
+    print("⏳ Testing database connection...")
     uvicorn.run(
         "main:app",
         host="127.0.0.1",
