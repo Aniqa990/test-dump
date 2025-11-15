@@ -687,7 +687,9 @@ export default function BranchPage() {
               alt={`${meta.nickname} arena`}
               fill
               priority
-              style={{ objectFit: "contain" }}
+              style={{ objectFit: "cover", objectPosition: "center" }}
+              quality={100}
+              unoptimized
             />
           ) : null}
         </div>

@@ -117,7 +117,8 @@ export default function Home() {
         fetchSubmissions();
       }
     }
-  }, [isAuthenticated, teamInfo, showLanding]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, teamInfo?.team_id, showLanding]);
 
   // Timer countdown
   useEffect(() => {
@@ -141,19 +142,37 @@ export default function Home() {
     // Check cache first
     const cached = localStorage.getItem("problems_cache");
     if (cached) {
-      setProblems(JSON.parse(cached));
-      return;
+      try {
+        setProblems(JSON.parse(cached));
+      } catch (e) {
+        console.warn("Failed to parse cached problems", e);
+      }
     }
 
     try {
-      const response = await fetch("/api/problems");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await fetch("/api/problems", {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
       if (!response.ok) throw new Error("Failed to fetch problems");
       const data = await response.json();
       setProblems(data);
       // Cache problems
       localStorage.setItem("problems_cache", JSON.stringify(data));
     } catch (error) {
-      console.error("Failed to fetch problems:", error);
+      if (error.name === "AbortError") {
+        console.error("Request timeout while fetching problems");
+        toast.error(
+          "Backend connection timeout. Please check if the Python server is running."
+        );
+      } else {
+        console.error("Failed to fetch problems:", error);
+      }
     }
   };
 
@@ -338,10 +357,12 @@ export default function Home() {
       <div className={styles.mapContainer}>
         <div className={styles.mapImage}>
           <Image
-            src="/images/map_final.jpeg"
+            src="/images/map_final.png"
             alt="Map"
             fill
             style={{ objectFit: "contain" }}
+            quality={100}
+            priority
           />
         </div>
 

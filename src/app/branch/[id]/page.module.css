@@ -128,13 +128,14 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  opacity: 0.95;
+  width: 100%;
+  height: 100%;
 }
 
 .sceneOverlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, rgba(4, 9, 30, 0.75) 0%, rgba(3, 3, 15, 0.9) 55%, rgba(2, 0, 12, 0.96) 100%);
+  background: linear-gradient(160deg, rgba(4, 9, 30, 0.3) 0%, rgba(3, 3, 15, 0.4) 55%, rgba(2, 0, 12, 0.5) 100%);
   z-index: 1;
 }
 
